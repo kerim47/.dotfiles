@@ -1,0 +1,1 @@
+{"cmd": "\nprint(\"Hello world\")\n", "import_complete": 1, "terminal": "tmux", "cmd_opts": " --cell_id=f9FkYcnSIr -s -p", "outhist_title": "%2", "outhist_cell": "f9FkYcnSIr", "is_md": 0}

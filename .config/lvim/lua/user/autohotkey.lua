@@ -1,0 +1,4 @@
+-- local cmp = require'cmp'
+-- cmp.setup.filetype({ 'autohotkey' }, {
+--   sources = { { name = 'autohotkey' } },
+-- })

@@ -1,0 +1,19 @@
+{
+  "name": "nvim-snippets",
+  "author": "Abdulkerim Akan",
+  "engines": {
+    "vscode": "^1.11.0"
+  },
+  "contributes": {
+    "snippets": [
+      {
+        "language": "c",
+        "path": "./mysnippets.json"
+      },
+      {
+        "language":[ "md","markdown"]
+        "path": "./markdown.json"
+      },
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "nvim-snippets",
+  "contributes": {
+    "snippets": [
+			{
+				"language": [
+					"all"
+				],
+				"path": "./snippets/all.json"
+			},
+      {
+        "language": "lua",
+        "path": "./snippets/lua.json"
+      },
+      {
+        "language": "c",
+        "path": "./snippets/c.json"
+      },
+      {
+        "language": ["python", "py", "ipynb", "jupyter"],
+        "path": "./snippets/python.json"
+      },
+      {
+        "language": [
+          "markdown",
+          "md"
+        ],
+        "path": "./snippets/markdown.json"
+      }
+    ]
+  }
+}

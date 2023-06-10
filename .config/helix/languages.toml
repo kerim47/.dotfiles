@@ -1,0 +1,7 @@
+# in <config_dir>/helix/languages.toml
+
+[[language]]
+name = "c"
+auto-format = true
+
+language-server = { command = "typescript-language-server", args = ["--stdio"] }

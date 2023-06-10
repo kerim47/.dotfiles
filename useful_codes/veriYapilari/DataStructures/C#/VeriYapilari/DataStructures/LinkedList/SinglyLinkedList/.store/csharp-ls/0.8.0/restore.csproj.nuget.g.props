@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <RestoreSuccess Condition=" '$(RestoreSuccess)' == '' ">True</RestoreSuccess>
+    <RestoreTool Condition=" '$(RestoreTool)' == '' ">NuGet</RestoreTool>
+    <ProjectAssetsFile Condition=" '$(ProjectAssetsFile)' == '' ">$(MSBuildThisFileDirectory)project.assets.json</ProjectAssetsFile>
+    <NuGetPackageRoot Condition=" '$(NuGetPackageRoot)' == '' ">$(UserProfile)\source\repos\DataStructures\DataStructures\LinkedList\SinglyLinkedList\.store\.stage\0t3ewquz.ucn</NuGetPackageRoot>
+    <NuGetPackageFolders Condition=" '$(NuGetPackageFolders)' == '' ">C:\Users\16008\source\repos\DataStructures\DataStructures\LinkedList\SinglyLinkedList\.store\.stage\0t3ewquz.ucn</NuGetPackageFolders>
+    <NuGetProjectStyle Condition=" '$(NuGetProjectStyle)' == '' ">DotnetToolReference</NuGetProjectStyle>
+    <NuGetToolVersion Condition=" '$(NuGetToolVersion)' == '' ">6.5.0</NuGetToolVersion>
+  </PropertyGroup>
+  <ItemGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <SourceRoot Include="C:\Users\16008\source\repos\DataStructures\DataStructures\LinkedList\SinglyLinkedList\.store\.stage\0t3ewquz.ucn\" />
+  </ItemGroup>
+  <PropertyGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <Pkgcsharp-ls Condition=" '$(Pkgcsharp-ls)' == '' ">C:\Users\16008\source\repos\DataStructures\DataStructures\LinkedList\SinglyLinkedList\.store\.stage\0t3ewquz.ucn\csharp-ls\0.8.0</Pkgcsharp-ls>
+  </PropertyGroup>
+</Project>

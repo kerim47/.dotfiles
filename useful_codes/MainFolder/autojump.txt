@@ -1,0 +1,12 @@
+$HOME/MainFolder/ProgrammingCodes/C/DataStructersSchool
+$HOME/MainFolder/C/veri_yapilari
+$HOME/MainFolder/autojump.txt
+$HOME/MainFolder/
+$HOME/.config/lvim/
+$HOME/
+/usr/bin/
+$WINHOME/vim_ahk
+$WINHOME/_vim
+$WINHOME/Desktop/main_folder/DataManipulation/
+$WINHOME/
+$WINHOME/source/repos/

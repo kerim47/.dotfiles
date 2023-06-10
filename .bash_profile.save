@@ -1,0 +1,23 @@
+#!/bin/bash
+eval "$(oh-my-posh --init --shell bash --config ~/.poshthemes/takuya.omp.json)"
+alias install='sudo apt-get install'
+alias update='sudo apt-get update'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias dd="clear"
+alias ls=logo-ls
+alias ll="ls -la"
+# Create a new alias for the lunarvim to vim
+alias vim=lvim
+
+export NVM_DIR="$HOME/.nvm"
+export LVIM_DIR="$HOME/.local/bin/lvim"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+#source line added
+export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+. "$HOME/.cargo/env"
+
