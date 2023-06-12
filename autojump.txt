@@ -9,3 +9,4 @@ $WINHOME/vim_ahk
 $WINHOME/_vim
 $WINHOME/Desktop/main_folder/DataManipulation/
 $WINHOME/
+$WINHOME/source/repos/
