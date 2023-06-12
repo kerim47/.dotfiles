@@ -1,3 +1,0 @@
-struct MyStruct {
-  k
-};
