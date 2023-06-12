@@ -1,0 +1,200 @@
+##################
+# Config Options #
+##################
+FASTGDB_DIR=~/.fastgdb
+FASTGDB_FILE=$FASTGDB_DIR/fastgdb_bp
+
+GREEN='\033[1;32m'
+CTX_COLOR=$GREEN
+NC='\033[1;0m'
+
+fastgdb_get_ctx() {
+  echo "$(readlink -f $FASTGDB_FILE | cut -d'_' -f3)"
+}
+
+gdf () {
+  if [ "$#" -eq 1 ] && [[ "$1" =~ [0-9] ]]; then
+    echo "${1}" > $FASTGDB_DIR/fastgdb_default_dest
+  else
+    echo "usage:   gdd [0-9]"
+  fi
+  echo "current: g$(cat $FASTGDB_DIR/fastgdb_default_dest)"
+}
+
+#######################
+# Fastgdb Definitions #
+#######################
+
+alias g0='sed -n "/g0/, /define/p" $FASTGDB_FILE | head -n-1'
+alias g1='sed -n "/g1/, /define/p" $FASTGDB_FILE | head -n-1'
+alias g2='sed -n "/g2/, /define/p" $FASTGDB_FILE | head -n-1'
+alias g3='sed -n "/g3/, /define/p" $FASTGDB_FILE | head -n-1'
+alias g4='sed -n "/g4/, /define/p" $FASTGDB_FILE | head -n-1'
+alias g5='sed -n "/g5/, /define/p" $FASTGDB_FILE | head -n-1'
+alias g6='sed -n "/g6/, /define/p" $FASTGDB_FILE | head -n-1'
+alias g7='sed -n "/g7/, /define/p" $FASTGDB_FILE | head -n-1'
+alias g8='sed -n "/g8/, /define/p" $FASTGDB_FILE | head -n-1'
+alias g9='sed -n "/g9/, /define/p" $FASTGDB_FILE | head -n-1'
+
+fastgdb_get_default_slot () {
+  local dest=$(cat $FASTGDB_DIR/fastgdb_default_dest)
+  sed -n "/g${dest}/, /end/p" $FASTGDB_FILE
+}
+alias g="fastgdb_get_default_slot"
+
+gv () {
+  local dest=""
+  if [ "$#" -eq 1 ] && [[ "$1" =~ [0-9] ]]; then
+    dest="$1"
+  else
+    dest=$(cat $FASTGDB_DIR/fastgdb_default_dest)
+  fi
+  # alternative: -c "norm O"
+  vim -c "/g${dest}" -c "/define" -c "?end" -c ".-1" $FASTGDB_FILE
+}
+
+# linum=$(cat -n fastgdb_bp | sed -n "/g2/,/end/p" | tail -n1 | tr -s ' ' | cut -f1)
+# sed "${linum}i hb *0x8034981" fastgdb_bp
+
+# NOTE: When using g1.-g9., use single quotes to wrap the whole command
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+alias g0.='python $SCRIPT_DIR/fastgdb.py g0'
+alias g1.='python $SCRIPT_DIR/fastgdb.py g1'
+alias g2.='python $SCRIPT_DIR/fastgdb.py g2'
+alias g3.='python $SCRIPT_DIR/fastgdb.py g3'
+alias g4.='python $SCRIPT_DIR/fastgdb.py g4'
+alias g5.='python $SCRIPT_DIR/fastgdb.py g5'
+alias g6.='python $SCRIPT_DIR/fastgdb.py g6'
+alias g7.='python $SCRIPT_DIR/fastgdb.py g7'
+alias g8.='python $SCRIPT_DIR/fastgdb.py g8'
+alias g9.='python $SCRIPT_DIR/fastgdb.py g9'
+alias g?='echo "${CTX_COLOR}[$(fastgdb_get_ctx)]${NC}"; cat $FASTGDB_FILE | grep "g[0-9]"'
+
+fgd() {
+  if [ "$FASTGDB_G_RUNS_MENU" == "on" ]; then
+    fgm
+  else
+    g?
+  fi
+}
+
+fgm() {
+  if ! [ "$#" == 1 -a "$1" == "quiet" ]; then
+    g?
+  fi
+  echo -n "> "
+  reply=$(bash -c "read -n 1 c; echo \$c")
+  echo ""
+  local cmd=""
+  if [ "$reply" == "." ]; then
+    echo -n "Enter cmd # to set: "
+    cmdnum=$(bash -c "read -n 1 c; echo \$c")
+    if [[ $cmdnum =~ [0-9] ]]; then
+      setcmd="g${cmdnum}."
+      echo -n "\nEnter cmd: "
+      cmd=$(bash -c "read c; echo \$c")
+      eval "$setcmd $cmd"
+      g?
+    else
+      echo "\ninvalid cmd # $cmdnum"
+    fi
+  elif [ "$reply" == "w" ]; then
+    gw
+  elif [ "$reply" == "x" ]; then
+    gx
+  elif [ "$reply" == "X" ]; then
+    gX
+  elif [ "$reply" == "-" ]; then
+    g-
+  elif [[ "$reply" =~ [0-9] ]]; then
+    cmd="f${reply}"
+    if [ "$FASTGDB_MENU_CONF" == "on" -a "$FASTGDB_CONF" != "on" ]; then
+      echo -n "Execute $cmd? [y/n] "
+      user_resp=$(bash -c "read -n 1 c; echo \$c")
+      if [ "$user_resp" == "y" ]; then
+        echo ""
+        eval "$cmd"
+      fi
+    else
+      echo ""
+      eval "$cmd"
+    fi
+  elif [ "$reply" == "?" ]; then
+    echo "= COMMANDS ============================================="
+    echo ". Set action   w Swap actions       x Change context"
+    echo "? Show help    0-9 Execute action   X Create new context"
+    echo "- Delete context"
+    echo "========================================================"
+    fgm "quiet"
+  else
+    echo "invalid cmd \"$reply\""
+  fi
+}
+
+gw() {
+  echo "Swap gdb commands:"
+  echo -n "> "
+  cmdnum1=$(bash -c "read -n 1 c; echo \$c")
+  echo ""
+  if [[ $cmdnum1 =~ [0-9] ]]; then
+    echo -n "> "
+    cmdnum2=$(bash -c "read -n 1 c; echo \$c")
+    echo ""
+    if [[ $cmdnum2 =~ [0-9] ]]; then
+      cmd1="$(cat $FASTGDB_FILE | grep 'g'${cmdnum1}' = ' | cut -d'=' -f 2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+      cmd2="$(cat $FASTGDB_FILE | grep 'g'${cmdnum2}' = ' | cut -d'=' -f 2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+      # 2nd sed command is from
+      # https://stackoverflow.com/questions/29613304/is-it-possible-to-escape-regex-metacharacters-reliably-with-sed
+      # to escape metacharacters like &&.
+      sed -i --follow-symlinks "s|g${cmdnum1} =.*$|g${cmdnum1} = $(sed 's/[&/\]/\\&/g' <<< $cmd2)|" $FASTGDB_FILE
+      sed -i --follow-symlinks "s|g${cmdnum2} =.*$|g${cmdnum2} = $(sed 's/[&/\]/\\&/g' <<< $cmd1)|" $FASTGDB_FILE
+      g?
+    fi
+  fi
+}
+
+gx() {
+  choice="$(ls -1 $FASTGDB_DIR/fastgdb__* | while read line; do echo $(basename $line) | cut -d'_' -f3 ; done | fzf --prompt="Change fastgdb ctx from [$(fastgdb_get_ctx)] to: " --preview="echo -e '${CTX_COLOR}[{}]${NC}'; cat '$FASTGDB_DIR/fastgdb__{}' | grep 'g[0-9]'" --preview-window=wrap)"
+  # Test to handle case where fzf was cancelled
+  if [ -n "$choice" ]; then
+    unlink "$FASTGDB_FILE"
+    ln -s "$FASTGDB_DIR/fastgdb__${choice}" "$FASTGDB_FILE"
+    g?
+fi
+}
+
+gX() {
+  echo -n "Create new fastgdb ctx? [y/n] "
+  user_resp=$(bash -c "read -n 1 c; echo \$c")
+  if [ "$user_resp" == "y" ]; then
+    echo -n "\nEnter new ctx name: "
+    read new_ctx
+    echo -ne "Use ${CTX_COLOR}[$new_ctx]${NC} as new ctx name? [y/n] "
+    user_resp=$(bash -c "read -n 1 c; echo \$c")
+    if [ "$user_resp" == "y" ]; then
+      base="$(ls -1 $FASTGDB_DIR/fastgdb__* | while read line; do echo $(basename $line) | cut -d'_' -f3 ; done | fzf --preview="echo -e '${CTX_COLOR}[{}]${NC}'; cat '$FASTGDB_DIR/fastgdb__{}' | grep 'g[0-9]'" --preview-window=wrap)"
+      echo -ne "\nUse ${CTX_COLOR}[$base]${NC} as base for new ctx? [y/n] "
+      user_resp=$(bash -c "read -n 1 c; echo \$c")
+      if [ "$user_resp" == "y" ]; then
+        cp "$FASTGDB_DIR/fastgdb__${base}" "$FASTGDB_DIR/fastgdb__${new_ctx}"
+        unlink "$FASTGDB_FILE"
+        ln -s "$FASTGDB_DIR/fastgdb__${new_ctx}" "$FASTGDB_FILE"
+        echo "\nCreated and switched to new context ${CTX_COLOR}[$new_ctx]${NC}"
+      fi
+    fi
+  fi
+}
+
+g-() {
+  choice="$(ls -1 $FASTGDB_DIR/fastgdb__* | while read line; do echo $(basename $line) | cut -d'_' -f3 ; done | fzf --prompt="fastgdb ctx to delete: " --preview="echo -e '${CTX_COLOR}[{}]${NC}'; cat '$FASTGDB_DIR/fastgdb__{}' | grep 'g[0-9]'" --preview-window=wrap)"
+  if [ "$(fastgdb_get_ctx)" == "$choice" ]; then
+    echo "Can't delete the current fastgdb ctx; switch to another ctx first"
+  else
+    echo -ne "Delete fastgdb ctx ${CTX_COLOR}[$choice]${NC}? [y/n] "
+    user_resp=$(bash -c "read -n 1 c; echo \$c")
+    if [ "$user_resp" == "y" ]; then
+      rm "$FASTGDB_DIR/fastgdb__$choice"
+      echo "\nDeleted fastgdb ctx $choice"
+    fi
+  fi
+}

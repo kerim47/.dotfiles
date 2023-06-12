@@ -1,0 +1,547 @@
+#################
+# GDB PWN FUNCS #
+#################
+
+# TODO: get arguments passed to rax
+define rx
+  shell rax2 $arg0
+end
+
+define rxk
+  shell rax2 -k $arg0
+end
+
+define rs
+  shell rax2 -s $arg0
+end
+
+define terl
+  target remote localhost:1234
+end
+
+define riscv
+  set arch riscv
+end
+
+define a1
+  printf "p/x $rdi\n"
+  p/x $rdi
+end
+define a2
+  printf "p/x $rsi\n"
+  p/x $rsi
+end
+define a3
+  printf "p/x $rdx\n"
+  p/x $rdx
+end
+define a4
+  printf "p/x $rcx\n"
+  p/x $rcx
+end
+define a5
+  printf "p/x $r8\n"
+  p/x $r8
+end
+define a6
+  printf "p/x $r9\n"
+  p/x $r9
+end
+
+define cqa
+  ! cat /proc/$(pidof qemu-arm-static)/maps
+end
+
+define cqaa
+  ! cat /proc/$(pidof qemu-aarch64-static)/maps
+end
+define cx
+  context
+end
+
+define shpc
+    x/10i $rip
+end
+
+define spc
+    si
+    x/10i $rip
+end
+
+define bnx
+# b $pc+4
+python
+ret = gdb.execute("x/2i $pc", from_tty = True, to_string = True)
+next_addr = ret.splitlines()[-1].strip().split()[0].strip(":")
+gdb.execute("tb *" + next_addr)
+end
+end
+
+define nn
+    bnx
+    c
+end
+
+define mhook
+  echo x/10gx &__malloc_hook\n
+  p/x &__malloc_hook
+  x/10gx &__malloc_hook
+end
+
+define fhook
+  echo x/10gx &__free_hook\n
+  p/x &__free_hook
+  x/10gx &__free_hook
+end
+
+define gb
+set $ghidra_address = $arg0
+python
+addr = gdb.convenience_variable("ghidra_address")
+gdb.execute("b *0x" + addr)
+end
+end
+
+define gbr
+set $ghidra_address = $arg0
+python
+addr = gdb.convenience_variable("ghidra_address")
+# TODO: make it unset the 0x1000 that ghidra adds to PIE binaries
+if addr[0:4] == "0010":
+    addr = addr[5:]
+gdb.execute("b *0x" + addr)
+end
+end
+
+# TODO: make a function to print out the current registers for the instruction
+# at point and copy them to clipboard (adding $)
+#  0x5555555552b1 <echo_inner+33>    lea    rdi, [rip + 0xd5c]
+#  0x5555555552b8 <echo_inner+40>    cdqe
+#> 0x5555555552ba <echo_inner+42>    mov    byte ptr [r12 + rax], 0
+# replace tokens like +- with tokens surrounded by spaces
+# split on spaces and treat symbols that start with a-z as registers
+
+# Get libc offset from libc base
+define loff
+set $addr_offset = $arg0
+
+python
+import subprocess
+import re
+
+# Run vmmap to get addresses
+vmmap_output = gdb.execute("vm", from_tty = True, to_string = True)
+
+# Remove ANSI escape sequences
+ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+vmmap_output = ansi_escape.sub('', vmmap_output)
+
+# Get base address of libc
+addr_line = next(line for line in vmmap_output.split("\n") if "libc" in line)
+libc_base = int(addr_line.strip().split(" ")[0], 16)
+print("libc base: 0x%x" % libc_base)
+
+offset = gdb.convenience_variable("addr_offset")
+print("libc.address = 0x%x - 0x%x" % (libc_base, offset - libc_base))
+end
+end
+
+define reb
+  printf "b *$rebase($arg0)\n"
+  b *$rebase($arg0)
+end
+
+# Static breakpoint (assuming GDB NOASLR)
+define stb
+    printf "b *0x555555554000+$arg0\n"
+    b *0x555555554000+$arg0
+end
+
+# qemu breakpoint
+define stqb
+    printf "b *0x4000000000+$arg0\n"
+    b *0x4000000000+$arg0
+end
+
+# *Really* rebase for PIE binaries
+# NOTE: need to wait for ELF to actually load before running this
+# use offset from binary base, e.g. 0x4009d2 --> rreb 0x9d2
+define rreb
+set $addr_offset = $arg0
+
+python
+import subprocess
+import re
+
+# Get the name of the binary
+elf_cmd = "file * | grep ELF | cut -d':' -f1 | grep -vE 'ld|libc' | head -1"
+elf_name = subprocess.check_output(elf_cmd, shell=True).rstrip().decode("utf-8")
+
+# Run vmmap to get addresses
+vmmap_output = gdb.execute("vm", from_tty = True, to_string = True)
+
+# Remove ANSI escape sequences
+ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+vmmap_output = ansi_escape.sub('', vmmap_output)
+
+# Get base address of binary
+try:
+    addr_line = next(line for line in vmmap_output.split("\n") if line.endswith(elf_name))
+except:
+    print(f"{elf_name=}")
+
+base_addr = int(addr_line.strip().split(" ")[0], 16)
+print("base address: 0x%x" % base_addr)
+
+# Run breakpoint command on address offset specified
+offset = gdb.convenience_variable("addr_offset")
+breakpoint_cmd = "b *" + hex(base_addr + offset)
+print(breakpoint_cmd)
+gdb.execute(breakpoint_cmd)
+end
+end
+
+define procb
+set $addr_offset = $arg0
+python
+import subprocess
+#ret = subprocess.check_output("grep -B1 '#PROC_MAP_BREAKPOINT_MARKER' ~/.gdbinit | head -n1", shell=True)
+ret = subprocess.check_output("grep '#BP_TYPE' ~/.gdbinit | cut -d',' -f2 | head -n1", shell=True)
+args = ret.decode().split(":")
+proc = args[1].strip()
+binary = args[2].strip()
+catmap_cmd = "cat /proc/$(pidof {})/maps | grep {}$ | head -n1 | cut -d'-' -f1".format(proc, binary)
+try:
+    base_addr = int(subprocess.check_output(catmap_cmd, shell=True).decode().strip(), 16)
+except:
+    raise ValueError("failed to get base address with process {}, binary {}".format(proc, binary))
+offset = gdb.convenience_variable("addr_offset")
+print("base address: 0x%x, offset: 0x%x" % (base_addr, offset))
+breakpoint_cmd = "b *" + hex(base_addr + offset)
+print(breakpoint_cmd)
+gdb.execute(breakpoint_cmd)
+end
+end
+
+define bbase
+import subprocess
+import re
+
+# Get the name of the binary
+# NOTE: this may fail if there are multiple elfs in the same directory
+elf_cmd = "file * | grep ELF | cut -d':' -f1 | grep -vE 'ld|libc' | head -1"
+elf_name = subprocess.check_output(elf_cmd, shell=True).rstrip().decode("utf-8")
+
+# Run vmmap to get addresses
+vmmap_output = gdb.execute("vm", from_tty = True, to_string = True)
+
+# Remove ANSI escape sequences
+ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+vmmap_output = ansi_escape.sub('', vmmap_output)
+
+# Get base address of binary
+addr_line = next(line for line in vmmap_output.split("\n") if line.endswith(elf_name))
+base_addr = int(addr_line.strip().split(" ")[0], 16)
+print("base address: 0x%x" % base_addr)
+end
+
+# define procb
+# set $breakpoint_offset = $arg0
+# python
+# import subprocess
+# offset = gdb.convenience_variable("breakpoint_offset")
+# ret = subprocess.check_output("cat /proc/$(pidof qemu-aarch64)/maps | grep vuln/vuln | head -n1 | cut -d '-' -f1", shell=True).decode().strip()
+# cmd = "b *0x{}+0x{:x}".format(ret, int(offset))
+# print(cmd)
+# gdb.execute(cmd)
+# end
+# end
+
+###############
+# GDB HISTORY #
+###############
+set history save on
+set history size unlimited
+set history filename ~/.gdb_history
+
+source ~/dotfiles/python-scripts/gdb_history_cmds.py
+
+# define fzf
+#   python
+# import subprocess
+# import os
+# HISTORY_FILE = "~/.gdb_history"
+# CMD_HISTORY_FILE = "~/.gdb_cmd_history"
+
+# # .gdb_history is only flushed when gdb exits, so use "show commands" to get
+# # access to commands from the current session
+# hist = gdb.execute("show commands", to_string=True)
+# hist += gdb.execute("show commands +", to_string=True).rstrip()
+# os.system("echo '" + hist + "' | cut -f4- -d' ' | tac | awk '!a[$0]++' | tac > ~/.gdb_cmd_history")
+# fzf_cmd = "cat " + HISTORY_FILE + " " + CMD_HISTORY_FILE + " | tac | awk '!x[$0]++' | tac | fzf --no-sort --tac"
+# try:
+#     gdb_cmd = subprocess.check_output(fzf_cmd, shell=True).rstrip().decode("utf-8")
+#     print(gdb_cmd)
+#     gdb.execute(gdb_cmd)
+# except:
+#     # print("ಠ_ಠ cancel fzf cmd")
+# 	print("༼ つ ◕_◕ ༽つ yeet")
+# end
+# end
+
+# Example
+# gdir 27
+# -->
+# dir ~/HeapLAB/.glibc/glibc_2.27/malloc
+define gdir
+set $glibc_num = $arg0
+
+python
+glibc_num = str(gdb.convenience_variable("glibc_num"))
+glibc_name = "glibc_"
+if "." in glibc_num:
+    glibc_name += glibc_num
+else:
+    glibc_name += "2." + glibc_num
+gdb_cmd = "dir ~/HeapLAB/.glibc/" + glibc_name + "/malloc"
+print(gdb_cmd)
+gdb.execute(gdb_cmd)
+end
+end
+
+define g223
+    dir "~/HeapLAB/.glibc/glibc_2.23/malloc"
+    context
+end
+
+define g227
+    dir "~/HeapLAB/.glibc/glibc_2.27/malloc"
+    context
+end
+
+define g231
+    dir "~/HeapLAB/.glibc/glibc_2.31/malloc"
+end
+
+# assembly examples:
+# mov    rax, QWORD PTR [rax+rdx*8+0x8]
+# mov    rax, qword ptr [rbp - 0x3]
+# => 0x555555400b00 <main+125>:   mov    QWORD PTR [rbp-0x28],0x7
+# TODO: want to dereference sp-0x64
+# ldp     x29, x30, [sp, #-64]
+# TODO: want to dereference [sp]
+# ldp    x29, x30, [sp], #0x40
+
+# TODO: want to print out the value of x19 and x20
+# 0x400160d0    ldp    x19, x20, [sp, #0x10]
+# 0x400160d4    ldp    x21, x22, [sp, #0x20]
+
+define drf
+python
+import re
+
+def print_reg(reg):
+    print(reg + " = " + gdb.execute("p/x ${}".format(reg), to_string=True).split("=")[-1].strip())
+
+# use "frame" to list code for current line
+def deref_mem(arg, deref=True):
+    # search for memory references
+    match = re.search("\[(.*)\]", arg)
+    if match and deref:
+        tokens = match.group(0)[1:-1].replace("-", " - ").replace("+", " + ").split(" ")
+        print(f"{tokens = }")
+        # sample tokens: ['rbp', '-', '0x28']
+        mem_cmd = "x/10gx "
+        for token in tokens:
+            reg_cand = re.search("^[a-z]+$", token)
+            if reg_cand:
+                # e.g. run "p/x $rbp"
+                reg = reg_cand.group(0)
+                print_reg(reg)
+                mem_cmd += "$" + reg
+            else:
+                mem_cmd += token
+        print(mem_cmd)
+        print(gdb.execute(mem_cmd, to_string=True))
+    elif not arg.startswith("0x"):
+        print_reg(arg)
+
+pcline = gdb.execute("x/i $pc", to_string=True)
+print(pcline)
+if "# 0x" in pcline:
+    print("rip relative")
+arglist = pcline.split(",")
+arg1 = arglist[0].split(" ")[-1]
+arg2 = arglist[1].strip()
+deref_mem(arg1, "lea" not in pcline)
+deref_mem(arg2, "lea" not in pcline)
+end
+end
+
+# quick cyclic
+define qcyc
+python
+pattern = gdb.execute("p/x $pc", to_string=True)[-9:]
+cmd = "cyclic -l 0x" + pattern
+print(cmd, end='')
+gdb.execute(cmd)
+end
+end
+
+# Register arguments
+define rarg
+python
+ret = gdb.execute("show arch", to_string=True)
+if "x86-64" in ret:
+    gdb.execute("i r rdi rsi rdx rcx r8 r9")
+elif "i386" in ret:
+    gdb.execute("x/10wx $esp")
+elif "aarch64" in ret:
+    gdb.execute("i r x0 x1 x2 x3 x4 x5 x6 x7")
+elif "arm" in ret:
+    gdb.execute("i r r0 r1 r2 r3")
+end
+end
+
+define stk
+if $argc >= 1
+    set $dump_size = $arg0
+else
+    set $dump_size = 10
+end
+python
+def gex(cmd):
+    print(cmd)
+    gdb.execute(cmd)
+
+dump_size = gdb.convenience_variable("dump_size")
+ret = gdb.execute("show arch", to_string=True)
+if "x86-64" in ret:
+    gex("x/{}gx $rsp".format(dump_size))
+elif "i386" in ret:
+    gex("x/{}wx $esp".format(dump_size))
+elif "aarch64" in ret:
+    gex("x/{}gx $sp".format(dump_size))
+elif "arm" in ret:
+    gex("x/{}gx $sp".format(dump_size))
+end
+end
+
+define vml
+    vmmap libc
+end
+
+define rlhist
+python
+import collections
+hist_idx = ""
+hist_buf = collections.deque()
+hist_set = set()
+
+hist_file_cmd = "tail -n10 ~/.gdb_history"
+hist_file_items = subprocess.check_output(hist_file_cmd, shell=True).rstrip().decode("utf-8")
+hist_file_set = set(hist_file_items.splitlines())
+
+for i in range(10):
+    hist = gdb.execute("show commands {}".format(hist_idx), to_string=True)
+    hist_idx = int(hist.splitlines()[0].split()[0]) - 5
+    if hist_idx <= 0:
+        break
+    clean_hist_chunk = [' '.join(line.split()[1:]) for line in hist.splitlines()]
+    hist_set.update(clean_hist_chunk)
+    if hist_file_set.issubset(hist_set):
+        break
+
+    hist_buf.extendleft(clean_hist_chunk)
+print(hist_buf)
+# print("hist_set", hist_set)
+# print("subset", set(hist_file_items.splitlines()).issubset(hist_set))
+end
+end
+
+# define f1_
+# python
+# import os
+# import subprocess
+# try:
+#     cmds = input("Enter f1 command: ")
+#     if cmds == "z":
+#         HISTORY_FILE = "~/.gdb_history"
+#         CMD_HISTORY_FILE = "~/.gdb_cmd_history"
+#         hist = gdb.execute("show commands", to_string=True)
+#         hist += gdb.execute("show commands +", to_string=True).rstrip()
+#         os.system("echo '" + hist + "' | cut -f4- -d' ' | tac | awk '!a[$0]++' | tac > ~/.gdb_cmd_history")
+#         fzf_cmd = "cat " + HISTORY_FILE + " " + CMD_HISTORY_FILE + " | tac | awk '!x[$0]++' | tac | fzf --no-sort --tac"
+#         # try:
+#         cmds = subprocess.check_output(fzf_cmd, shell=True).rstrip().decode("utf-8")
+#         # except:
+#         #     print("༼ つ ◕_◕ ༽つ yeet")
+
+#     # Delete previous command definition
+#     os.system("sed -i '/define f1/,/#F1_INSERT_MARKER/{//!d}' ~/.gdbinit")
+#     # Insert f1q to print out command to be executed
+#     os.system("sed -i '/^#F1_INSERT_MARKER/i f1q' ~/.gdbinit")
+#     for cmd in cmds.split(";"):
+#         print(cmd)
+#         os.system("sed -i '/^#F1_INSERT_MARKER/i {}' ~/.gdbinit".format(cmd))
+#     gdb.execute("source ~/.gdbinit")
+# except KeyboardInterrupt:
+#     print("༼ つ ◕_◕ ༽つ yeet")
+# end
+# end
+
+# define f1q
+#     ! sed -n '/^define f1/,/^#F1_INSERT_MARKER/{//!p;}' ~/.gdbinit
+# end
+
+################
+# GDB SETTINGS #
+################
+set disassembly-flavor intel
+define intel
+    set disassembly-flavor intel
+end
+
+define .i
+    source ~/.gdbinit
+end
+
+define .p
+    source ~/.gdb_pwn_funcs
+end
+
+##################
+# GDB FRAMEWORKS #
+##################
+define gef
+# Use python to access $HOME and do the following:
+# source $HOME/.gdbinit-gef.py
+python
+import os
+gdb.execute("source" + os.environ['HOME'] + '/.gdbinit-gef.py')
+end
+
+alias heb = heap bins
+alias hec = heap chunks
+end
+
+define pwnn
+# Use python to access $HOME and do the following:
+# source $HOME/pwndbg/gdbinit.py
+python
+import os
+gdb.execute("source" + os.environ['HOME'] + '/pwndbg/gdbinit.py')
+end
+
+# Load pwngdb-specific aliases after pwngdb is initialized
+alias vm = vmmap
+alias nca = nextcall
+alias nr = nextret
+
+end
+
+define gep
+source ~/GEP/.gdbinit-gep
+end
+
+alias gp = gep
