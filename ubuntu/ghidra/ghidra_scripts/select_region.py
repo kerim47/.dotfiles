@@ -1,6 +1,0 @@
-ret = askString("Select Region", "Enter addresses, e.g. <start:end>")
-split = ret.split(":")
-start = int(split[0], 16)
-end = int(split[1], 16)
-print("Selection: start 0x%x --> end 0x%x" % (start, end))
-setCurrentSelection(ghidra.program.util.ProgramSelection(toAddr(start), toAddr(end)))
