@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<channel name="xfce4-screensaver" version="1.0">
+  <property name="saver" type="empty">
+    <property name="mode" type="int" value="2"/>
+    <property name="enabled" type="bool" value="true"/>
+    <property name="fullscreen-inhibit" type="bool" value="true"/>
+    <property name="idle-activation" type="empty">
+      <property name="delay" type="int" value="3"/>
+    </property>
+    <property name="themes" type="empty">
+      <property name="list" type="array">
+        <value type="string" value="screensavers-xfce-personal-slideshow"/>
+      </property>
+    </property>
+  </property>
+  <property name="lock" type="empty">
+    <property name="saver-activation" type="empty">
+      <property name="enabled" type="bool" value="true"/>
+      <property name="delay" type="int" value="1"/>
+    </property>
+    <property name="embedded-keyboard" type="empty">
+      <property name="enabled" type="bool" value="false"/>
+    </property>
+    <property name="enabled" type="bool" value="false"/>
+  </property>
+  <property name="screensavers" type="empty">
+    <property name="xfce-personal-slideshow" type="empty">
+      <property name="location" type="string" value="/home/kerim/my_screensaver"/>
+      <property name="arguments" type="string" value="--location=/home/kerim/my_screensaver"/>
+      <property name="no-stretch" type="bool" value="true"/>
+      <property name="background-color" type="string" value="#FFFFFF"/>
+    </property>
+  </property>
+</channel>

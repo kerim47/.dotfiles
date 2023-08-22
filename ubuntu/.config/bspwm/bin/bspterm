@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+# launch alacritty with bspwm config
+if [ "$1" == "-f" ]; then
+	/usr/bin/xfce4-terminal
+else
+	/usr/bin/xfce4-terminal
+fi
